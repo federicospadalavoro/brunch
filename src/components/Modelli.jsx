@@ -347,7 +347,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                       style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", outline: "none" }}
                     >
                       <img 
-                        src="/chevron.right.png" 
+                        src={import.meta.env.BASE_URL + 'chevron.right.png'} 
                         alt="toggle" 
                         style={{ width: "16px", height: "16px", objectFit: "contain", transform: activeTemplateIndex === index ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
                       />

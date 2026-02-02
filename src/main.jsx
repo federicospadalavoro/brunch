@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// Set favicon
+// Set favicon (respect Vite base URL)
 const favicon = document.createElement('link')
 favicon.rel = 'icon'
-favicon.href = '/icon.png'
+favicon.href = import.meta.env.BASE_URL + 'icon.png'
 favicon.type = 'image/png'
 document.head.appendChild(favicon)
 
