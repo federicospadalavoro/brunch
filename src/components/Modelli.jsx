@@ -477,15 +477,21 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                   </div>
 
                   {/* Tabella Giorni - Scrollabile */}
-                  <div style={{ flex: "1 1 auto", overflowX: "auto" }}>
+                  <div style={{ flex: "1 1 auto", overflowX: "auto", overflowY: "hidden" }}>
+                    {/* Header sticky sulla tabella */}
+                    <div style={{ position: 'sticky', top: 0, zIndex: 1000, background: 'var(--table-header-bg)', display: 'flex' }}>
+                      <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
+                        <thead>
+                          <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
+                            {days.map((d) => (
+                              <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px" }}>{d.label}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                      </table>
+                    </div>
+                    {/* Corpo della tabella */}
                     <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
-                      <thead>
-                        <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
-                          {days.map((d) => (
-                            <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px", position: 'sticky', top: 0, zIndex: 1000, background: 'var(--table-header-bg)' }}>{d.label}</th>
-                          ))}
-                        </tr>
-                      </thead>
                       <tbody>
                         {collaborators.map((u, idx) => {
                           const rk = rowKeyForUser(u);
