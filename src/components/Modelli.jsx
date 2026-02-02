@@ -114,12 +114,6 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
   const [activeTemplateIndex, setActiveTemplateIndex] = useState(null); // Template attualmente aperto/in modifica
   const [scrollButtonAnimating, setScrollButtonAnimating] = useState(false);
   const previewRef = useRef(null);
-  const containerRef = useRef(null);
-  const resizerRef = useRef(null);
-  const [delta, setDelta] = useState(0);
-  const draggingRef = useRef(false);
-  const startYRef = useRef(0);
-  const startDeltaRef = useRef(0);
 
   const scrollPreviewToBottom = () => {
     if (previewRef.current) {
@@ -165,73 +159,6 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
     });
     setDrafts(initial);
   }, [templates]);
-
-  useEffect(() => {
-    const onMove = (e) => {
-      if (!draggingRef.current) return;
-      const clientY = e.clientY ?? (e.touches && e.touches[0] && e.touches[0].clientY);
-      if (clientY == null) return;
-      const dy = clientY - startYRef.current;
-      const container = containerRef.current;
-      const max = container ? Math.max(50, Math.floor(container.clientHeight / 2 - 60)) : 300;
-      let next = startDeltaRef.current + dy;
-      if (next > max) next = max;
-      if (next < -max) next = -max;
-      setDelta(next);
-    };
-
-    const onUp = () => {
-      if (!draggingRef.current) return;
-      draggingRef.current = false;
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onUp);
-    };
-
-    // cleanup on unmount
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onUp);
-    };
-  }, []);
-
-  const startDrag = (e) => {
-    e.preventDefault();
-    draggingRef.current = true;
-    startYRef.current = e.clientY ?? (e.touches && e.touches[0] && e.touches[0].clientY) ?? 0;
-    startDeltaRef.current = delta;
-    document.addEventListener('mousemove', (ev) => {
-      const moveEvent = ev;
-      if (!draggingRef.current) return;
-      const clientY = moveEvent.clientY;
-      const dy = clientY - startYRef.current;
-      const container = containerRef.current;
-      const max = container ? Math.max(50, Math.floor(container.clientHeight / 2 - 60)) : 300;
-      let next = startDeltaRef.current + dy;
-      if (next > max) next = max;
-      if (next < -max) next = -max;
-      setDelta(next);
-    });
-    document.addEventListener('mouseup', () => { draggingRef.current = false; });
-    // touch
-    document.addEventListener('touchmove', (ev) => {
-      if (!draggingRef.current) return;
-      const touch = ev.touches && ev.touches[0];
-      if (!touch) return;
-      const clientY = touch.clientY;
-      const dy = clientY - startYRef.current;
-      const container = containerRef.current;
-      const max = container ? Math.max(50, Math.floor(container.clientHeight / 2 - 60)) : 300;
-      let next = startDeltaRef.current + dy;
-      if (next > max) next = max;
-      if (next < -max) next = -max;
-      setDelta(next);
-    }, { passive: false });
-    document.addEventListener('touchend', () => { draggingRef.current = false; });
-  };
 
   const handleCreate = () => {
     const name = prompt("Nome del nuovo modello:");
@@ -393,11 +320,11 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
         ) : (
           <>
             {/* Contenitore diviso in due se c'è un template attivo */}
-            <div ref={containerRef} style={{ 
+            <div style={{ 
               display: activeTemplateIndex !== null ? 'grid' : 'flex',
-              gridTemplateRows: activeTemplateIndex !== null ? `calc(1fr - ${delta}px) calc(1fr + ${delta}px)` : 'auto',
+              gridTemplateRows: activeTemplateIndex !== null ? '1fr 1fr' : 'auto',
               flexDirection: 'column',
-              gap: '8px',
+              gap: '24px',
               height: activeTemplateIndex !== null ? 'calc(100vh - 200px)' : 'auto'
             }}>
               {/* Parte superiore: Lista template */}
@@ -621,16 +548,6 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                 </div>
                 )}
               </div>
-
-              {/* Resizer between top and bottom panes */}
-              {activeTemplateIndex !== null && (
-                <div className="row-resizer" ref={resizerRef}
-                  onMouseDown={(e) => startDrag(e)}
-                  onTouchStart={(e) => startDrag(e.touches[0])}
-                >
-                  <div className="row-resizer-handle" title="Ridimensiona" />
-                </div>
-              )}
             );
           })}
               </div>
