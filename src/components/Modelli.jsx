@@ -124,6 +124,8 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
   const previewRef = useRef(null);
   const templatesListRef = useRef(null);
   const itemRefs = useRef({});
+  const daysTableHeaderRef = useRef(null);
+  const daysTableBodyRef = useRef(null);
 
   const scrollPreviewToBottom = () => {
     if (previewRef.current) {
@@ -219,6 +221,25 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
       container.scrollTop = scrollTop;
     }
   }, [activeTemplateIndex]);
+
+  // Sincronizza lo scroll orizzontale tra header e tabella body
+  useEffect(() => {
+    const headerDiv = daysTableHeaderRef.current;
+    const bodyDiv = daysTableBodyRef.current;
+    if (!headerDiv || !bodyDiv) return;
+
+    const syncScroll = (source, target) => {
+      target.scrollLeft = source.scrollLeft;
+    };
+
+    headerDiv.addEventListener('scroll', () => syncScroll(headerDiv, bodyDiv));
+    bodyDiv.addEventListener('scroll', () => syncScroll(bodyDiv, headerDiv));
+
+    return () => {
+      headerDiv.removeEventListener('scroll', () => syncScroll(headerDiv, bodyDiv));
+      bodyDiv.removeEventListener('scroll', () => syncScroll(bodyDiv, headerDiv));
+    };
+  }, [daysTableHeaderRef, daysTableBodyRef]);
 
   const handleCreate = () => {
     const name = prompt("Nome del nuovo modello:");
@@ -425,6 +446,23 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                   </div>
                 </div>
                 {activeTemplateIndex === index && (
+                <>
+                  {/* Header sticky dei giorni */}
+                  <div ref={daysTableHeaderRef} style={{ position: 'sticky', top: 0, zIndex: 1000, background: 'var(--table-header-bg)', display: 'flex', marginBottom: '-40px', overflow: 'hidden' }}>
+                    <div style={{ flex: "0 0 auto", minWidth: "200px" }}></div>
+                    <div style={{ flex: "1 1 auto", overflow: 'hidden' }}>
+                      <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
+                        <thead>
+                          <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
+                            {days.map((d) => (
+                              <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px" }}>{d.label}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                      </table>
+                    </div>
+                  </div>
+                  {/* Corpo delle tabelle */}
                 <div style={{ display: "flex" }}>
                   {/* Tabella Collaboratori - Fissa */}
                   <div style={{ flex: "0 0 auto" }}>
@@ -477,19 +515,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                   </div>
 
                   {/* Tabella Giorni - Scrollabile */}
-                  <div style={{ flex: "1 1 auto", overflowX: "auto", overflowY: "hidden" }}>
-                    {/* Header sticky sulla tabella */}
-                    <div style={{ position: 'sticky', top: 0, zIndex: 1000, background: 'var(--table-header-bg)', display: 'flex' }}>
-                      <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
-                        <thead>
-                          <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
-                            {days.map((d) => (
-                              <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px" }}>{d.label}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                      </table>
-                    </div>
+                  <div ref={daysTableBodyRef} style={{ flex: "1 1 auto", overflowX: "auto" }}>
                     {/* Corpo della tabella */}
                     <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
                       <tbody>
@@ -613,8 +639,8 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                     </table>
                   </div>
                 </div>
-                )}
-              </div>
+                </>
+                )}              </div>
             );
           })}
               </div>
