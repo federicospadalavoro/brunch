@@ -394,7 +394,8 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                 gap: '24px',
                 overflowY: 'auto',
                 minHeight: 0,
-                paddingBottom: '10px'
+                paddingBottom: '10px',
+                position: 'relative'
               }}>
                 {templates.map((t, index) => {
             const draft = drafts[index] || t;
@@ -430,7 +431,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                     <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
                       <thead>
                         <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
-                            <th style={{ padding: "10px", textAlign: "left", minWidth: "200px", position: 'sticky', top: 0, zIndex: 5, background: 'var(--table-header-bg)' }}>Collaboratore</th>
+                            <th style={{ padding: "10px", textAlign: "left", minWidth: "200px", position: 'sticky', top: 0, zIndex: 1000, background: 'var(--table-header-bg)' }}>Collaboratore</th>
                           </tr>
                       </thead>
                       <tbody>
@@ -481,7 +482,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                       <thead>
                         <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
                           {days.map((d) => (
-                            <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px", position: 'sticky', top: 0, zIndex: 4, background: 'var(--table-header-bg)' }}>{d.label}</th>
+                            <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px", position: 'sticky', top: 0, zIndex: 1000, background: 'var(--table-header-bg)' }}>{d.label}</th>
                           ))}
                         </tr>
                       </thead>
