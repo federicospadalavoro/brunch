@@ -131,7 +131,7 @@ function App() {
   if (loading) return <p>Caricamento...</p>;
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL || '/'}>
       <AppContent
         state={state}
         addUser={addUser}
