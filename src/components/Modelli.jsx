@@ -122,6 +122,8 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
   const topHeight = Math.max(50, (containerHeight / 2) + (totalDelta / 2) * 2);
   const bottomHeight = Math.max(50, (containerHeight / 2) - (totalDelta / 2) * 2);
   const previewRef = useRef(null);
+  const templatesListRef = useRef(null);
+  const itemRefs = useRef({});
 
   const scrollPreviewToBottom = () => {
     if (previewRef.current) {
@@ -194,6 +196,29 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragStartY, dragDeltaY, accumulatedDeltaY]);
+
+  // Auto-scroll to first row of the opened template
+  useEffect(() => {
+    if (activeTemplateIndex === null) return;
+    const container = templatesListRef.current;
+    const itemEl = itemRefs.current[activeTemplateIndex];
+    if (!container || !itemEl) return;
+
+    // cerca la prima riga della tabella dentro l'item (tbody tr)
+    const firstRow = itemEl.querySelector('tbody tr');
+    const targetEl = firstRow || itemEl;
+
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    const scrollTop = container.scrollTop + (targetRect.top - containerRect.top);
+
+    try {
+      container.scrollTo({ top: scrollTop, behavior: 'smooth' });
+      console.log('⤴️ auto-scroll to', scrollTop, 'for template', activeTemplateIndex);
+    } catch (err) {
+      container.scrollTop = scrollTop;
+    }
+  }, [activeTemplateIndex]);
 
   const handleCreate = () => {
     const name = prompt("Nome del nuovo modello:");
@@ -282,7 +307,6 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
         </div>
       </div>
 
-      {/* Preset Manager Modal */}
       {showPresetManager && (
         <>
           <div 
@@ -346,7 +370,6 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
         </>
       )}
 
-      {/* Lista Modelli Impilati */}
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {templates.length === 0 ? (
           <p style={{ textAlign: "center", color: "#999", fontSize: "18px", marginTop: "50px" }}>
@@ -365,7 +388,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
             title={`dragDeltaY: ${dragDeltaY}px - topHeight: ${topHeight}px - bottomHeight: ${bottomHeight}px`}
             >
               {/* Parte superiore: Lista template */}
-              <div style={{ 
+              <div ref={templatesListRef} style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
                 gap: '24px',
@@ -376,7 +399,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                 {templates.map((t, index) => {
             const draft = drafts[index] || t;
             return (
-              <div key={t.id || index} style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "1px solid var(--border-color)" }}>
+              <div ref={(el) => itemRefs.current[index] = el} key={t.id || index} style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "1px solid var(--border-color)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "var(--table-header-bg)", cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
                     <button 
@@ -407,8 +430,8 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                     <table style={{ borderCollapse: "collapse", width: "100%", borderRadius: "0" }}>
                       <thead>
                         <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
-                          <th style={{ padding: "10px", textAlign: "left", minWidth: "200px" }}>Collaboratore</th>
-                        </tr>
+                            <th style={{ padding: "10px", textAlign: "left", minWidth: "200px", position: 'sticky', top: 0, zIndex: 5, background: 'var(--table-header-bg)' }}>Collaboratore</th>
+                          </tr>
                       </thead>
                       <tbody>
                         {collaborators.map((u) => {
@@ -458,7 +481,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
                       <thead>
                         <tr style={{ backgroundColor: "var(--table-header-bg)", color: "var(--table-header-text)", height: "40px" }}>
                           {days.map((d) => (
-                            <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px" }}>{d.label}</th>
+                            <th key={d.key} style={{ padding: "10px", textAlign: "left", minWidth: "240px", position: 'sticky', top: 0, zIndex: 4, background: 'var(--table-header-bg)' }}>{d.label}</th>
                           ))}
                         </tr>
                       </thead>
