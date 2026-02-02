@@ -7,10 +7,17 @@ const scrollButtonAnimationStyle = `
     0% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-8px) scale(1.1); }
     100% { transform: translateY(0) scale(1); }
-  }
-`;
+                )}
+              </div>
 
-const styleSheet = document.createElement('style');
+              {/* Middle thin separator with centered circle (visual only) */}
+              {activeTemplateIndex !== null && (
+                <div style={{ height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--button-bg)', border: '1px solid var(--border-color)' }} />
+                </div>
+              )}
+
+              {/* Parte inferiore: Visualizzazione Gantt in tempo reale */}
 styleSheet.textContent = scrollButtonAnimationStyle;
 document.head.appendChild(styleSheet);
 
@@ -322,7 +329,7 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
             {/* Contenitore diviso in due se c'è un template attivo */}
             <div style={{ 
               display: activeTemplateIndex !== null ? 'grid' : 'flex',
-              gridTemplateRows: activeTemplateIndex !== null ? '1fr 1fr' : 'auto',
+              gridTemplateRows: activeTemplateIndex !== null ? '1fr auto 1fr' : 'auto',
               flexDirection: 'column',
               gap: '24px',
               height: activeTemplateIndex !== null ? 'calc(100vh - 200px)' : 'auto'
