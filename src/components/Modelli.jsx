@@ -7,17 +7,10 @@ const scrollButtonAnimationStyle = `
     0% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-8px) scale(1.1); }
     100% { transform: translateY(0) scale(1); }
-                )}
-              </div>
+  }
+`;
 
-              {/* Middle thin separator with centered circle (visual only) */}
-              {activeTemplateIndex !== null && (
-                <div style={{ height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--button-bg)', border: '1px solid var(--border-color)' }} />
-                </div>
-              )}
-
-              {/* Parte inferiore: Visualizzazione Gantt in tempo reale */}
+const styleSheet = document.createElement('style');
 styleSheet.textContent = scrollButtonAnimationStyle;
 document.head.appendChild(styleSheet);
 
@@ -120,6 +113,14 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
   const [drafts, setDrafts] = useState({});
   const [activeTemplateIndex, setActiveTemplateIndex] = useState(null); // Template attualmente aperto/in modifica
   const [scrollButtonAnimating, setScrollButtonAnimating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragDeltaY, setDragDeltaY] = useState(0);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [accumulatedDeltaY, setAccumulatedDeltaY] = useState(0);
+  const containerHeight = activeTemplateIndex !== null ? window.innerHeight - 200 : 0;
+  const totalDelta = accumulatedDeltaY + dragDeltaY;
+  const topHeight = Math.max(50, (containerHeight / 2) + (totalDelta / 2) * 2);
+  const bottomHeight = Math.max(50, (containerHeight / 2) - (totalDelta / 2) * 2);
   const previewRef = useRef(null);
 
   const scrollPreviewToBottom = () => {
@@ -166,6 +167,33 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
     });
     setDrafts(initial);
   }, [templates]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      const delta = e.clientY - dragStartY;
+      console.log('🖱️ mousemove - dragStartY:', dragStartY, 'currentY:', e.clientY, 'delta:', delta);
+      setDragDeltaY(delta);
+    };
+
+    const handleMouseUp = () => {
+      console.log('🛑 mouseup - final dragDeltaY:', dragDeltaY, 'accumulated:', accumulatedDeltaY);
+      setAccumulatedDeltaY(accumulatedDeltaY + dragDeltaY);
+      setDragDeltaY(0);
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      console.log('✅ drag started - dragStartY:', dragStartY);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStartY, dragDeltaY, accumulatedDeltaY]);
 
   const handleCreate = () => {
     const name = prompt("Nome del nuovo modello:");
@@ -329,11 +357,13 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
             {/* Contenitore diviso in due se c'è un template attivo */}
             <div style={{ 
               display: activeTemplateIndex !== null ? 'grid' : 'flex',
-              gridTemplateRows: activeTemplateIndex !== null ? '1fr auto 1fr' : 'auto',
+              gridTemplateRows: activeTemplateIndex !== null ? `${topHeight}px auto ${bottomHeight}px` : 'auto',
               flexDirection: 'column',
-              gap: '24px',
+              gap: activeTemplateIndex !== null ? '0' : '24px',
               height: activeTemplateIndex !== null ? 'calc(100vh - 200px)' : 'auto'
-            }}>
+            }}
+            title={`dragDeltaY: ${dragDeltaY}px - topHeight: ${topHeight}px - bottomHeight: ${bottomHeight}px`}
+            >
               {/* Parte superiore: Lista template */}
               <div style={{ 
                 display: 'flex', 
@@ -558,6 +588,54 @@ export default function Modelli({ users = [], templates = [], timePresets = [], 
             );
           })}
               </div>
+
+              {/* Divisore con pulsante rotondo */}
+              {activeTemplateIndex !== null && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '1px',
+                  gap: '12px',
+                  overflow: 'visible',
+                  position: 'relative',
+                  zIndex: 100
+                }}>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                  <button 
+                    onMouseDown={(e) => {
+                      console.log('🖱️ button mousedown at Y:', e.clientY);
+                      setIsDragging(true);
+                      setDragStartY(e.clientY);
+                    }}
+                    style={{
+                    width: '40px',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    borderRadius: '50%',
+                    border: '2px solid var(--border-color)',
+                    background: 'var(--button-bg)',
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    transition: 'all 0.2s ease',
+                    padding: 0,
+                    outline: 'none'
+                  }}>
+                    <img 
+                      src={import.meta.env.BASE_URL + 'arrow.up.and.down.png'}
+                      alt="expand"
+                      draggable={false}
+                      onDragStart={(e) => e.preventDefault()}
+                      style={{ width: '20px', height: '20px', objectFit: 'contain', userSelect: 'none', pointerEvents: 'none' }}
+                    />
+                  </button>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                </div>
+              )}
 
               {/* Parte inferiore: Visualizzazione Gantt in tempo reale */}
               {activeTemplateIndex !== null && drafts[activeTemplateIndex] && (

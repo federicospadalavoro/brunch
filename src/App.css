@@ -181,30 +181,6 @@ main {
   }
 }
 
-/* Row resizer between grid rows */
-.row-resizer {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: row-resize;
-  user-select: none;
-  width: 100%;
-}
-
-.row-resizer-handle {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--button-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-}
-
-.row-resizer-handle:hover {
-  transform: scale(1.03);
-}
-
 .sidebar-overlay {
   position: fixed;
   top: 0;
