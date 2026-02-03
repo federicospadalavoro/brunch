@@ -48,4 +48,5 @@ export const initialState = {
     //   createdAt: "2026-01-20T10:00:00Z"
     // }
   ],
+    timeEntries: {},
 };

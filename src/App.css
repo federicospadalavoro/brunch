@@ -65,6 +65,59 @@ main {
   flex-direction: column;
 }
 
+.bottom-nav {
+  display: none;
+}
+
+.segmented-control {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0;
+  padding: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.segmented-slider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  background: var(--button-bg);
+  border-radius: 10px;
+  transition: transform 0.2s ease;
+  z-index: 0;
+}
+
+.segmented-btn {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 6px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.segmented-btn:focus,
+.segmented-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.segmented-btn.active {
+  color: var(--button-text);
+}
+
 /* Hamburger Button */
 .hamburger {
   position: relative !important;
@@ -124,11 +177,19 @@ main {
   }
   
   .app-container {
+    flex-direction: column;
+  }
+  
+  .app-container {
     padding-left: 0;
   }
   
   main {
-    padding: 10px;
+    padding: 0;
+  }
+
+  main > div {
+    padding: 0 !important;
   }
   
   header {
@@ -138,6 +199,48 @@ main {
   header h1 {
     font-size: 24px;
   }
+
+  .bottom-nav {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--sidebar-bg, #f2f2f7);
+    border-top: 1px solid var(--border-color, #e5e5ea);
+    z-index: 999;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .bottom-nav a {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--text-color);
+    border-radius: 12px;
+    font-size: 20px;
+    transition: background 0.2s, transform 0.2s;
+  }
+
+  .bottom-nav a img {
+    width: 22px;
+    height: 22px;
+    display: block;
+    object-fit: contain;
+    filter: brightness(0);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .bottom-nav a img {
+      filter: brightness(0) invert(1);
+    }
+  }
+
 }
 
 .sidebar-mini a {
@@ -156,16 +259,28 @@ main {
   transition: all 0.2s !important;
 }
 
+.sidebar-mini a img {
+  width: 22px;
+  height: 22px;
+  display: block;
+  object-fit: contain;
+  filter: brightness(0);
+}
+
 @media (prefers-color-scheme: dark) {
   .sidebar-mini a:hover, .sidebar-mini a.active {
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: transparent !important;
     transform: scale(1.1);
+  }
+
+  .sidebar-mini a img {
+    filter: brightness(0) invert(1);
   }
 }
 
 @media (prefers-color-scheme: light) {
   .sidebar-mini a:hover, .sidebar-mini a.active {
-    background: rgba(0, 0, 0, 0.1) !important;
+    background: transparent !important;
     transform: scale(1.1);
   }
 }

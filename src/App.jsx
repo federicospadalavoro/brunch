@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { saveState, loadState } from "./config/firebaseUtils";
 import { initialState } from "./schema/initialState";
-import Home from "./components/Home";
 import Collaboratori from "./components/Collaboratori";
 import Modelli from "./components/Modelli";
 import GeneratoreTurni from "./components/GeneratoreTurni";
 import ViewTurno from "./components/ViewTurno";
+import Timbrature from "./components/Timbrature";
+import Presenze from "./components/Presenze";
 import "./App.css";
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           templates: Array.isArray(firebaseState.templates) ? firebaseState.templates : [],
           timePresets: Array.isArray(firebaseState.timePresets) ? firebaseState.timePresets : [],
           generatedShifts: Array.isArray(firebaseState.generatedShifts) ? firebaseState.generatedShifts : [],
+          timeEntries: firebaseState.timeEntries || {},
         });
       }
       setLoading(false);
@@ -128,6 +130,27 @@ function App() {
     }));
   };
 
+  const saveTimeEntry = (username, dateKey, inTime, outTime) => {
+    setState((prev) => {
+      const monthKey = dateKey.slice(0, 7);
+      const userEntries = prev.timeEntries?.[username] || {};
+      const monthEntries = userEntries[monthKey] || {};
+      return {
+        ...prev,
+        timeEntries: {
+          ...prev.timeEntries,
+          [username]: {
+            ...userEntries,
+            [monthKey]: {
+              ...monthEntries,
+              [dateKey]: { in: inTime || "", out: outTime || "" },
+            },
+          },
+        },
+      };
+    });
+  };
+
   if (loading) return <p>Caricamento...</p>;
 
   return (
@@ -145,15 +168,152 @@ function App() {
         deleteTimePreset={deleteTimePreset}
         addGeneratedShift={addGeneratedShift}
         deleteGeneratedShift={deleteGeneratedShift}
+        saveTimeEntry={saveTimeEntry}
       />
     </BrowserRouter>
   );
 }
 
-function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updateTemplate, deleteTemplate, addTimePreset, updateTimePreset, deleteTimePreset, addGeneratedShift, deleteGeneratedShift }) {
+function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updateTemplate, deleteTemplate, addTimePreset, updateTimePreset, deleteTimePreset, addGeneratedShift, deleteGeneratedShift, saveTimeEntry }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const baseUrl = import.meta.env.BASE_URL || "/";
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+
+  const validateCredentials = (creds) => {
+    if (!creds?.username || !creds?.password) return false;
+    return (state.users || []).some(
+      (u) => u.username === creds.username && u.password === creds.password,
+    );
+  };
+
+  useEffect(() => {
+    let stored = null;
+    try {
+      const raw = localStorage.getItem("authCredentials");
+      stored = raw ? JSON.parse(raw) : null;
+    } catch {
+      stored = null;
+    }
+
+    if (stored && validateCredentials(stored)) {
+      setIsAuthed(true);
+      setLoginForm({ username: stored.username, password: stored.password });
+      setLoginError("");
+    } else {
+      setIsAuthed(false);
+    }
+
+    setAuthChecked(true);
+  }, [state.users]);
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    const creds = {
+      username: loginForm.username.trim(),
+      password: loginForm.password,
+    };
+
+    if (validateCredentials(creds)) {
+      localStorage.setItem("authCredentials", JSON.stringify(creds));
+      setIsAuthed(true);
+      setLoginError("");
+      return;
+    }
+
+    setIsAuthed(false);
+    setLoginError("Credenziali non valide");
+  };
+
+  if (!authChecked) {
+    return <div style={{ padding: "20px" }}>Caricamento...</div>;
+  }
+
+  if (!isAuthed) {
+    return (
+      <div
+        style={{
+          minHeight: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <form
+          onSubmit={handleLoginSubmit}
+          style={{
+            width: "100%",
+            maxWidth: "320px",
+            background: "var(--card-bg)",
+            border: "1px solid var(--border-color)",
+            borderRadius: "12px",
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: "18px" }}>Accesso</div>
+          <input
+            type="text"
+            placeholder="Username"
+            value={loginForm.username}
+            onChange={(e) =>
+              setLoginForm((prev) => ({ ...prev, username: e.target.value }))
+            }
+            style={{
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid var(--input-border)",
+              background: "var(--input-bg)",
+            }}
+            required
+            autoComplete="username"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={loginForm.password}
+            onChange={(e) =>
+              setLoginForm((prev) => ({ ...prev, password: e.target.value }))
+            }
+            style={{
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid var(--input-border)",
+              background: "var(--input-bg)",
+            }}
+            required
+            autoComplete="current-password"
+          />
+          {loginError && (
+            <div style={{ color: "#e74c3c", fontSize: "13px" }}>
+              {loginError}
+            </div>
+          )}
+          <button
+            type="submit"
+            style={{
+              padding: "10px",
+              borderRadius: "8px",
+              border: "none",
+              background: "var(--button-bg)",
+              color: "var(--button-text)",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Entra
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -166,22 +326,42 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
           >
             ☰
           </button>
-          <Link to="/" title="Home" className={location.pathname === "/" ? "active" : ""}>🏠</Link>
-          <Link to="/collaboratori" title="Collaboratori" className={location.pathname === "/collaboratori" ? "active" : ""}>👥</Link>
-          <Link to="/modelli" title="Modelli" className={location.pathname === "/modelli" ? "active" : ""}>📋</Link>
-          <Link to="/generatore-turni" title="Generatore Turni" className={location.pathname === "/generatore-turni" ? "active" : ""}>📅</Link>
+          <Link to="/collaboratori" title="Collaboratori" className={location.pathname === "/collaboratori" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/collaboratori" ? "person.2.fill.png" : "person.2.png"}`}
+              alt="Collaboratori"
+            />
+          </Link>
+          <Link to="/modelli" title="Modelli" className={location.pathname === "/modelli" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/modelli" ? "text.document.fill.png" : "text.document.png"}`}
+              alt="Modelli"
+            />
+          </Link>
+          <Link to="/generatore-turni" title="Generatore Turni" className={location.pathname === "/generatore-turni" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/generatore-turni" ? "calendar.circle.fill.png" : "calendar.circle.png"}`}
+              alt="Generatore Turni"
+            />
+          </Link>
+          <Link to="/timbrature" title="Timbrature" className={location.pathname === "/timbrature" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/timbrature" ? "clock.badge.checkmark.fill.png" : "clock.badge.checkmark.png"}`}
+              alt="Timbrature"
+            />
+          </Link>
+          <Link to="/presenze" title="Presenze" className={location.pathname === "/presenze" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/presenze" ? "list.clipboard.fill.png" : "list.bullet.clipboard.png"}`}
+              alt="Presenze"
+            />
+          </Link>
         </div>
 
         {/* Full Sidebar Menu (Expandable) */}
         {menuOpen && (
           <>
             <div className="sidebar-menu">
-              <Link
-                to="/"
-                onClick={() => setMenuOpen(false)}
-              >
-                🏠 Home
-              </Link>
               <Link
                 to="/collaboratori"
                 onClick={() => setMenuOpen(false)}
@@ -200,6 +380,18 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
               >
                 📅 Generatore Turni
               </Link>
+              <Link
+                to="/timbrature"
+                onClick={() => setMenuOpen(false)}
+              >
+                🕒 Timbrature
+              </Link>
+              <Link
+                to="/presenze"
+                onClick={() => setMenuOpen(false)}
+              >
+                📊 Presenze
+              </Link>
             </div>
             <div
               className="sidebar-overlay"
@@ -210,13 +402,13 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
 
         <main>
           <header>
-            <h1 onClick={() => navigate("/")}
+            <h1 onClick={() => navigate("/modelli")}
             >
               📅 Gestione Turni
             </h1>
           </header>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Navigate to="/modelli" replace />} />
             <Route
               path="/collaboratori"
               element={
@@ -256,6 +448,22 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
               }
             />
             <Route
+              path="/timbrature"
+              element={
+                <Timbrature
+                  users={state.users || []}
+                  timeEntries={state.timeEntries || {}}
+                  onSaveEntry={saveTimeEntry}
+                />
+              }
+            />
+            <Route
+              path="/presenze"
+              element={
+                <Presenze users={state.users || []} timeEntries={state.timeEntries || {}} />
+              }
+            />
+            <Route
               path="/view"
               element={
                 <ViewTurno generatedShifts={state.generatedShifts || []} users={state.users || []} />
@@ -263,6 +471,38 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
             />
           </Routes>
         </main>
+        <nav className="bottom-nav">
+          <Link to="/collaboratori" title="Collaboratori" className={location.pathname === "/collaboratori" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/collaboratori" ? "person.2.fill.png" : "person.2.png"}`}
+              alt="Collaboratori"
+            />
+          </Link>
+          <Link to="/modelli" title="Modelli" className={location.pathname === "/modelli" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/modelli" ? "text.document.fill.png" : "text.document.png"}`}
+              alt="Modelli"
+            />
+          </Link>
+          <Link to="/generatore-turni" title="Generatore Turni" className={location.pathname === "/generatore-turni" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/generatore-turni" ? "calendar.circle.fill.png" : "calendar.circle.png"}`}
+              alt="Generatore Turni"
+            />
+          </Link>
+          <Link to="/timbrature" title="Timbrature" className={location.pathname === "/timbrature" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/timbrature" ? "clock.badge.checkmark.fill.png" : "clock.badge.checkmark.png"}`}
+              alt="Timbrature"
+            />
+          </Link>
+          <Link to="/presenze" title="Presenze" className={location.pathname === "/presenze" ? "active" : ""}>
+            <img
+              src={`${baseUrl}${location.pathname === "/presenze" ? "list.clipboard.fill.png" : "list.bullet.clipboard.png"}`}
+              alt="Presenze"
+            />
+          </Link>
+        </nav>
       </div>
     </div>
   );
