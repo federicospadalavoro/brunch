@@ -368,7 +368,7 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
   };
 
   const sectionElements = {
-    home: <Home />,
+    home: <Home generatedShifts={state.generatedShifts || []} />,
     collaboratori: (
       <Collaboratori
         users={state.users}

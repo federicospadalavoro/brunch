@@ -4,6 +4,12 @@ import { useNavigate } from "react-router-dom";
 export default function TurniCreati({ generatedShifts = [] }) {
   const navigate = useNavigate();
   const chevronSrc = `${import.meta.env.BASE_URL}chevron.right.png`;
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    if (!year || !month || !day) return dateStr;
+    return `${day}/${month}`;
+  };
 
   const orderedShifts = useMemo(() => {
     return [...(generatedShifts || [])].sort((a, b) =>
@@ -74,7 +80,7 @@ export default function TurniCreati({ generatedShifts = [] }) {
                     {shift.name}
                   </div>
                   <div style={{ fontSize: "12px", color: "var(--text-secondary, #6b7280)" }}>
-                    {shift.startDate} → {shift.endDate}
+                    {formatDate(shift.startDate)} → {formatDate(shift.endDate)}
                   </div>
                 </div>
                 <img
