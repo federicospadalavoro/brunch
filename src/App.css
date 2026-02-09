@@ -9,8 +9,8 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  overscroll-behavior-y: none;
   background: var(--app-bg, #ffffff);
+  overflow: hidden;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -72,6 +72,8 @@ main {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .bottom-nav {

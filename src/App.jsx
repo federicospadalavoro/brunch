@@ -287,18 +287,23 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
 
   useEffect(() => {
     const setAppHeight = () => {
-      const vvHeight = window.visualViewport?.height || 0;
-      const height = Math.max(window.innerHeight, vvHeight);
+      const height = window.visualViewport?.height || window.innerHeight;
       document.documentElement.style.setProperty("--app-height", `${height}px`);
     };
 
-    setAppHeight();
-    window.addEventListener("resize", setAppHeight);
-    window.visualViewport?.addEventListener?.("resize", setAppHeight);
+    const schedule = () => requestAnimationFrame(setAppHeight);
+
+    schedule();
+    window.addEventListener("resize", schedule);
+    window.addEventListener("orientationchange", schedule);
+    window.visualViewport?.addEventListener?.("resize", schedule);
+    window.visualViewport?.addEventListener?.("scroll", schedule);
 
     return () => {
-      window.removeEventListener("resize", setAppHeight);
-      window.visualViewport?.removeEventListener?.("resize", setAppHeight);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("orientationchange", schedule);
+      window.visualViewport?.removeEventListener?.("resize", schedule);
+      window.visualViewport?.removeEventListener?.("scroll", schedule);
     };
   }, []);
 
