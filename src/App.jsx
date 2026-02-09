@@ -287,7 +287,8 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
 
   useEffect(() => {
     const setAppHeight = () => {
-      const height = window.visualViewport?.height || window.innerHeight;
+      const vvHeight = window.visualViewport?.height || 0;
+      const height = Math.max(window.innerHeight, vvHeight);
       document.documentElement.style.setProperty("--app-height", `${height}px`);
     };
 

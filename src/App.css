@@ -30,7 +30,8 @@ html, body, #root {
 .app {
   display: flex;
   flex-direction: column;
-  min-height: var(--app-height, 100dvh);
+  height: var(--app-height, 100dvh);
+  min-height: 100dvh;
   position: relative;
   padding-bottom: max(0px, calc(env(safe-area-inset-bottom) - 10px));
   background: var(--app-bg, var(--card-bg));
@@ -40,6 +41,7 @@ html, body, #root {
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 header {
@@ -69,6 +71,7 @@ main {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .bottom-nav {
