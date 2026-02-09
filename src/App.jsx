@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { saveState, loadState } from "./config/firebaseUtils";
 import { initialState } from "./schema/initialState";
@@ -19,11 +19,35 @@ function App() {
   const [state, setState] = useState(initialState);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const hasLoadedRef = useRef(false);
+  const hadDataRef = useRef(false);
 
   // Carica lo stato da Firebase al mount
   useEffect(() => {
     const fetchState = async () => {
       const firebaseState = await loadState();
+      const hasAnyData = (s) => {
+        if (!s) return false;
+        const entriesCount = s.timeEntries ? Object.keys(s.timeEntries).length : 0;
+        return (
+          (s.users || []).length > 0 ||
+          (s.templates || []).length > 0 ||
+          (s.generatedShifts || []).length > 0 ||
+          (s.timePresets || []).length > 0 ||
+          entriesCount > 0
+        );
+      };
+
+      let lastGood = null;
+      try {
+        const lastGoodRaw = localStorage.getItem("lastGoodState");
+        lastGood = lastGoodRaw ? JSON.parse(lastGoodRaw) : null;
+      } catch {
+        lastGood = null;
+      }
+      hadDataRef.current = hasAnyData(firebaseState) || hasAnyData(lastGood);
+      hasLoadedRef.current = true;
+
       if (firebaseState) {
         // Assicurati che users sia un array
         setState({
@@ -45,7 +69,35 @@ function App() {
   // Salva su Firebase ogni volta che lo stato cambia
   useEffect(() => {
     if (!loading) {
+      const hasAnyData = (s) => {
+        if (!s) return false;
+        const entriesCount = s.timeEntries ? Object.keys(s.timeEntries).length : 0;
+        return (
+          (s.users || []).length > 0 ||
+          (s.templates || []).length > 0 ||
+          (s.generatedShifts || []).length > 0 ||
+          (s.timePresets || []).length > 0 ||
+          entriesCount > 0
+        );
+      };
+
+      const shouldBlockEmptySave = () => {
+        if (!hasLoadedRef.current) return true;
+        if (!hasAnyData(state)) return true;
+        return false;
+      };
+
+      if (shouldBlockEmptySave()) {
+        console.warn("⛔️ Salvataggio bloccato: stato vuoto dopo dati esistenti");
+        return;
+      }
+
       saveState(state);
+      try {
+        localStorage.setItem("lastGoodState", JSON.stringify(state));
+      } catch {
+        // ignore storage errors
+      }
     }
   }, [state, loading]);
 
