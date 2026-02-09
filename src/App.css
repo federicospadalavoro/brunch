@@ -92,6 +92,20 @@ main {
   display: none;
 }
 
+.chevron-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.6;
+  filter: brightness(0);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chevron-icon {
+    filter: brightness(0) invert(1);
+  }
+}
+
 .profile-container {
   width: 100%;
   display: flex;

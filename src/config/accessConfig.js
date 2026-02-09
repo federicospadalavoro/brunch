@@ -47,6 +47,17 @@ export const sectionsConfig = [
     showInPermissions: true,
   },
   {
+    id: "turni-creati",
+    label: "Turni Creati",
+    path: "/turni-creati",
+    iconRegular: null,
+    iconActive: null,
+    navEmoji: "🗓️",
+    showInNav: true,
+    showInMenu: true,
+    showInPermissions: true,
+  },
+  {
     id: "timbrature",
     label: "Timbrature",
     path: "/timbrature",

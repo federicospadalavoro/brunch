@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 const toMonthKey = (date) => date.toISOString().slice(0, 7);
 const toDateKey = (date) => date.toISOString().slice(0, 10);
@@ -39,7 +39,12 @@ const formatMonthLabel = (monthKey) => {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
-export default function Timbrature({ users = [], timeEntries = {}, onSaveEntry }) {
+export default function Timbrature({
+  users = [],
+  timeEntries = {},
+  generatedShifts = [],
+  onSaveEntry,
+}) {
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(toDateKey(today));
 
@@ -69,6 +74,57 @@ export default function Timbrature({ users = [], timeEntries = {}, onSaveEntry }
 
   const monthEntries = userEntries?.[selectedMonth] || {};
   const monthDays = Object.keys(monthEntries).sort();
+
+  const dayKeyFromDate = (dateKey) => {
+    const date = new Date(dateKey);
+    if (Number.isNaN(date.getTime())) return null;
+    const dayIndex = date.getDay();
+    const map = {
+      0: "domenica",
+      1: "lunedi",
+      2: "martedi",
+      3: "mercoledi",
+      4: "giovedi",
+      5: "venerdi",
+      6: "sabato",
+    };
+    return map[dayIndex] || null;
+  };
+
+  const getShiftTimesForDate = (dateKey) => {
+    if (!username || !dateKey) return null;
+    const dayKey = dayKeyFromDate(dateKey);
+    if (!dayKey) return null;
+
+    const shift = (generatedShifts || []).find((s) =>
+      s?.startDate && s?.endDate && dateKey >= s.startDate && dateKey <= s.endDate,
+    );
+    if (!shift?.grid?.[username]?.[dayKey]) return null;
+
+    const cell = shift.grid[username][dayKey];
+    if (!cell?.in1 || !cell?.out1) return null;
+    return { in: cell.in1, out: cell.out1 };
+  };
+
+  useEffect(() => {
+    const monthKey = selectedDate.slice(0, 7);
+    const existing = userEntries?.[monthKey]?.[selectedDate];
+    if (existing?.in || existing?.out) {
+      setInTime(existing.in || "");
+      setOutTime(existing.out || "");
+      return;
+    }
+
+    const shiftTimes = getShiftTimesForDate(selectedDate);
+    if (shiftTimes) {
+      setInTime(shiftTimes.in || "");
+      setOutTime(shiftTimes.out || "");
+      return;
+    }
+
+    setInTime("");
+    setOutTime("");
+  }, [selectedDate, userEntries, generatedShifts, username]);
 
   if (!user) {
     return (
