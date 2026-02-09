@@ -285,6 +285,22 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
     return () => window.removeEventListener("load", onLoad);
   }, []);
 
+  useEffect(() => {
+    const setScreenHeight = () => {
+      const height = window.screen?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--screen-height", `${height}px`);
+    };
+
+    setScreenHeight();
+    window.addEventListener("orientationchange", setScreenHeight);
+    window.addEventListener("resize", setScreenHeight);
+
+    return () => {
+      window.removeEventListener("orientationchange", setScreenHeight);
+      window.removeEventListener("resize", setScreenHeight);
+    };
+  }, []);
+
 
   const validateCredentials = (creds) => {
     if (!creds?.username || !creds?.password) return false;

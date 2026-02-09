@@ -12,12 +12,14 @@ html, body {
   background: var(--app-bg, #ffffff);
   overflow-y: auto;
   position: relative;
+  min-height: var(--screen-height, 100%);
 }
 
 #root {
   height: 100%;
   width: 100%;
   background: var(--app-bg, #ffffff);
+  min-height: var(--screen-height, 100%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,6 +43,7 @@ html, body {
   min-height: 100%;
   position: relative;
   background: var(--app-bg, var(--card-bg));
+  min-height: var(--screen-height, 100%);
 }
 
 .app-container {
