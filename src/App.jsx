@@ -285,27 +285,6 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
     return () => window.removeEventListener("load", onLoad);
   }, []);
 
-  useEffect(() => {
-    const setAppHeight = () => {
-      const height = window.visualViewport?.height || window.innerHeight;
-      document.documentElement.style.setProperty("--app-height", `${height}px`);
-    };
-
-    const schedule = () => requestAnimationFrame(setAppHeight);
-
-    schedule();
-    window.addEventListener("resize", schedule);
-    window.addEventListener("orientationchange", schedule);
-    window.visualViewport?.addEventListener?.("resize", schedule);
-    window.visualViewport?.addEventListener?.("scroll", schedule);
-
-    return () => {
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("orientationchange", schedule);
-      window.visualViewport?.removeEventListener?.("resize", schedule);
-      window.visualViewport?.removeEventListener?.("scroll", schedule);
-    };
-  }, []);
 
   const validateCredentials = (creds) => {
     if (!creds?.username || !creds?.password) return false;

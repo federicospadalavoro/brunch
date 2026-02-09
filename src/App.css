@@ -10,7 +10,6 @@ html, body, #root {
   height: 100%;
   width: 100%;
   background: var(--app-bg, #ffffff);
-  overflow: hidden;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,10 +29,8 @@ html, body, #root {
 .app {
   display: flex;
   flex-direction: column;
-  height: var(--app-height, 100dvh);
-  min-height: 100dvh;
+  height: 100dvh;
   position: relative;
-  padding-bottom: max(0px, calc(env(safe-area-inset-bottom) - 10px));
   background: var(--app-bg, var(--card-bg));
 }
 
@@ -73,7 +70,6 @@ main {
   flex-direction: column;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
 }
 
 .bottom-nav {
