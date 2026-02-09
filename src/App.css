@@ -7,8 +7,10 @@
 }
 
 html, body, #root {
-  height: 100dvh;
+  height: 100%;
   width: 100%;
+  overscroll-behavior-y: none;
+  background: var(--app-bg, #ffffff);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,8 +30,10 @@ html, body, #root {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   position: relative;
+  padding-bottom: max(0px, calc(env(safe-area-inset-bottom) - 10px));
+  background: var(--app-bg, var(--card-bg));
 }
 
 .app-container {
@@ -357,8 +361,8 @@ main {
   }
 
   .app.is-standalone .bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom);
-    height: calc(60px + env(safe-area-inset-bottom));
+    padding-bottom: max(0px, calc(env(safe-area-inset-bottom) - 10px));
+    height: calc(60px + max(0px, calc(env(safe-area-inset-bottom) - 10px)));
   }
 
   .bottom-nav a {
@@ -635,6 +639,7 @@ input:focus, select:focus, textarea:focus {
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --app-bg: #1a1a1a;
     --text-color: #e0e0e0;
     --border-color: #444;
     --hamburger-bg: #1a1a1a;
@@ -657,6 +662,7 @@ input:focus, select:focus, textarea:focus {
 
 @media (prefers-color-scheme: light) {
   :root {
+    --app-bg: #ffffff;
     --text-color: #1a1a1a;
     --border-color: #eee;
     --hamburger-bg: #f2f2f7;

@@ -277,6 +277,30 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
     };
   }, []);
 
+  useEffect(() => {
+    const onLoad = () => {
+      setTimeout(() => window.scrollTo(0, 0), 0);
+    };
+    window.addEventListener("load", onLoad);
+    return () => window.removeEventListener("load", onLoad);
+  }, []);
+
+  useEffect(() => {
+    const setAppHeight = () => {
+      const height = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${height}px`);
+    };
+
+    setAppHeight();
+    window.addEventListener("resize", setAppHeight);
+    window.visualViewport?.addEventListener?.("resize", setAppHeight);
+
+    return () => {
+      window.removeEventListener("resize", setAppHeight);
+      window.visualViewport?.removeEventListener?.("resize", setAppHeight);
+    };
+  }, []);
+
   const validateCredentials = (creds) => {
     if (!creds?.username || !creds?.password) return false;
     return (state.users || []).some(
