@@ -1,13 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { saveState, loadState } from "./config/firebaseUtils";
 import { initialState } from "./schema/initialState";
 import Collaboratori from "./components/Collaboratori";
+import Home from "./components/Home";
 import Modelli from "./components/Modelli";
 import GeneratoreTurni from "./components/GeneratoreTurni";
 import ViewTurno from "./components/ViewTurno";
 import Timbrature from "./components/Timbrature";
 import Presenze from "./components/Presenze";
+import Profilo from "./components/Profilo";
+import Permessi from "./components/Permessi";
+import { sectionsConfig, rolesConfig } from "./config/accessConfig";
 import "./App.css";
 
 function App() {
@@ -29,6 +33,7 @@ function App() {
           timePresets: Array.isArray(firebaseState.timePresets) ? firebaseState.timePresets : [],
           generatedShifts: Array.isArray(firebaseState.generatedShifts) ? firebaseState.generatedShifts : [],
           timeEntries: firebaseState.timeEntries || {},
+          accessMatrix: firebaseState.accessMatrix || {},
         });
       }
       setLoading(false);
@@ -151,6 +156,13 @@ function App() {
     });
   };
 
+  const setAccessMatrix = (accessMatrix) => {
+    setState((prev) => ({
+      ...prev,
+      accessMatrix,
+    }));
+  };
+
   if (loading) return <p>Caricamento...</p>;
 
   return (
@@ -169,12 +181,13 @@ function App() {
         addGeneratedShift={addGeneratedShift}
         deleteGeneratedShift={deleteGeneratedShift}
         saveTimeEntry={saveTimeEntry}
+        setAccessMatrix={setAccessMatrix}
       />
     </BrowserRouter>
   );
 }
 
-function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updateTemplate, deleteTemplate, addTimePreset, updateTimePreset, deleteTimePreset, addGeneratedShift, deleteGeneratedShift, saveTimeEntry }) {
+function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updateTemplate, deleteTemplate, addTimePreset, updateTimePreset, deleteTimePreset, addGeneratedShift, deleteGeneratedShift, saveTimeEntry, setAccessMatrix }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -183,6 +196,86 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
   const [isAuthed, setIsAuthed] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const currentUser = (state.users || []).find(
+    (u) => u.username === loginForm.username,
+  );
+  const profileInitial = (
+    currentUser?.nome?.[0] ||
+    currentUser?.username?.[0] ||
+    "?"
+  ).toUpperCase();
+  const userLevel = currentUser?.livelloAmministrazione ?? 0;
+
+  const normalizeAccessMatrix = (matrix) => {
+    const next = { ...(matrix || {}) };
+    let changed = false;
+
+    rolesConfig.forEach((role) => {
+      const roleKey = String(role.id);
+      const roleMatrix = { ...(next[roleKey] || {}) };
+      sectionsConfig.forEach((section) => {
+        if (!section.showInPermissions) return;
+        if (roleMatrix[section.id] === undefined) {
+          roleMatrix[section.id] = true;
+          changed = true;
+        }
+      });
+      next[roleKey] = roleMatrix;
+    });
+
+    return { matrix: next, changed };
+  };
+
+  const normalizedAccess = useMemo(
+    () => normalizeAccessMatrix(state.accessMatrix),
+    [state.accessMatrix],
+  );
+
+  useEffect(() => {
+    if (normalizedAccess.changed && setAccessMatrix) {
+      setAccessMatrix(normalizedAccess.matrix);
+    }
+  }, [normalizedAccess, setAccessMatrix]);
+
+  const canAccess = (sectionId) => {
+    const section = sectionsConfig.find((s) => s.id === sectionId);
+    if (section?.alwaysAllow) return true;
+    if (section?.requiresBoss) return userLevel >= 2;
+    const roleMatrix = normalizedAccess.matrix?.[String(userLevel)] || {};
+    const allowed = roleMatrix?.[sectionId];
+    return allowed ?? true;
+  };
+
+  const allowedSections = sectionsConfig.filter(
+    (section) => section.showInNav && canAccess(section.id),
+  );
+  const allowedMenuSections = sectionsConfig.filter(
+    (section) => section.showInMenu && canAccess(section.id),
+  );
+  const defaultPath = allowedSections[0]?.path || "/profilo";
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    const checkStandalone = () => {
+      const isStandaloneDisplay = window.matchMedia?.("(display-mode: standalone)")?.matches;
+      const isFullscreenDisplay = window.matchMedia?.("(display-mode: fullscreen)")?.matches;
+      const isIOSStandalone = window.navigator?.standalone;
+      setIsStandalone(Boolean(isStandaloneDisplay || isFullscreenDisplay || isIOSStandalone));
+    };
+
+    checkStandalone();
+    const mqStandalone = window.matchMedia?.("(display-mode: standalone)");
+    const mqFullscreen = window.matchMedia?.("(display-mode: fullscreen)");
+
+    const handler = () => checkStandalone();
+    mqStandalone?.addEventListener?.("change", handler);
+    mqFullscreen?.addEventListener?.("change", handler);
+
+    return () => {
+      mqStandalone?.removeEventListener?.("change", handler);
+      mqFullscreen?.removeEventListener?.("change", handler);
+    };
+  }, []);
 
   const validateCredentials = (creds) => {
     if (!creds?.username || !creds?.password) return false;
@@ -227,6 +320,82 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
 
     setIsAuthed(false);
     setLoginError("Credenziali non valide");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("authCredentials");
+    setIsAuthed(false);
+    setLoginForm({ username: "", password: "" });
+    setMenuOpen(false);
+    navigate("/");
+  };
+
+  const sectionElements = {
+    home: <Home />,
+    collaboratori: (
+      <Collaboratori
+        users={state.users}
+        onAddUser={addUser}
+        onUpdateUser={updateUser}
+        onDeleteUser={deleteUser}
+      />
+    ),
+    modelli: (
+      <Modelli
+        users={state.users}
+        templates={state.templates || []}
+        timePresets={state.timePresets || []}
+        onAddTemplate={addTemplate}
+        onUpdateTemplate={updateTemplate}
+        onDeleteTemplate={deleteTemplate}
+        onAddTimePreset={addTimePreset}
+        onUpdateTimePreset={updateTimePreset}
+        onDeleteTimePreset={deleteTimePreset}
+      />
+    ),
+    "generatore-turni": (
+      <GeneratoreTurni
+        templates={state.templates || []}
+        generatedShifts={state.generatedShifts || []}
+        onAddGeneratedShift={addGeneratedShift}
+        onDeleteGeneratedShift={deleteGeneratedShift}
+      />
+    ),
+    timbrature: (
+      <Timbrature
+        users={state.users || []}
+        timeEntries={state.timeEntries || {}}
+        onSaveEntry={saveTimeEntry}
+      />
+    ),
+    presenze: (
+      <Presenze users={state.users || []} timeEntries={state.timeEntries || {}} />
+    ),
+    profilo: (
+      <Profilo
+        user={currentUser}
+        onLogout={handleLogout}
+      />
+    ),
+    permessi: (
+      <Permessi
+        user={currentUser}
+        sections={sectionsConfig}
+        roles={rolesConfig}
+        accessMatrix={normalizedAccess.matrix}
+        onUpdateAccessMatrix={(sectionId, roleId, value) => {
+          const roleKey = String(roleId);
+          const roleMatrix = {
+            ...(normalizedAccess.matrix?.[roleKey] || {}),
+            [sectionId]: value,
+          };
+          setAccessMatrix({
+            ...normalizedAccess.matrix,
+            [roleKey]: roleMatrix,
+          });
+        }}
+      />
+    ),
   };
 
   if (!authChecked) {
@@ -316,7 +485,7 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
   }
 
   return (
-    <div className="app">
+    <div className={`app${isStandalone ? " is-standalone" : ""}`}>
       <div className="app-container">
         {/* Mini Sidebar (Always visible) */}
         <div className="sidebar-mini">
@@ -326,72 +495,47 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
           >
             ☰
           </button>
-          <Link to="/collaboratori" title="Collaboratori" className={location.pathname === "/collaboratori" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/collaboratori" ? "person.2.fill.png" : "person.2.png"}`}
-              alt="Collaboratori"
-            />
-          </Link>
-          <Link to="/modelli" title="Modelli" className={location.pathname === "/modelli" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/modelli" ? "text.document.fill.png" : "text.document.png"}`}
-              alt="Modelli"
-            />
-          </Link>
-          <Link to="/generatore-turni" title="Generatore Turni" className={location.pathname === "/generatore-turni" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/generatore-turni" ? "calendar.circle.fill.png" : "calendar.circle.png"}`}
-              alt="Generatore Turni"
-            />
-          </Link>
-          <Link to="/timbrature" title="Timbrature" className={location.pathname === "/timbrature" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/timbrature" ? "clock.badge.checkmark.fill.png" : "clock.badge.checkmark.png"}`}
-              alt="Timbrature"
-            />
-          </Link>
-          <Link to="/presenze" title="Presenze" className={location.pathname === "/presenze" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/presenze" ? "list.clipboard.fill.png" : "list.bullet.clipboard.png"}`}
-              alt="Presenze"
-            />
-          </Link>
+          {allowedSections.map((section) => {
+            const isActive = location.pathname === section.path;
+            return (
+              <Link
+                key={section.id}
+                to={section.path}
+                title={section.label}
+                className={isActive ? "active" : ""}
+              >
+                {section.id === "profilo" ? (
+                  <span className="profile-nav-avatar" aria-label="Profilo">
+                    {profileInitial}
+                  </span>
+                ) : section.iconRegular ? (
+                  <img
+                    src={`${baseUrl}${isActive ? section.iconActive : section.iconRegular}`}
+                    alt={section.label}
+                  />
+                ) : (
+                  <span className="nav-emoji" aria-label={section.label}>
+                    {section.navEmoji || "•"}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Full Sidebar Menu (Expandable) */}
         {menuOpen && (
           <>
             <div className="sidebar-menu">
-              <Link
-                to="/collaboratori"
-                onClick={() => setMenuOpen(false)}
-              >
-                👥 Collaboratori
-              </Link>
-              <Link
-                to="/modelli"
-                onClick={() => setMenuOpen(false)}
-              >
-                📋 Modelli
-              </Link>
-              <Link
-                to="/generatore-turni"
-                onClick={() => setMenuOpen(false)}
-              >
-                📅 Generatore Turni
-              </Link>
-              <Link
-                to="/timbrature"
-                onClick={() => setMenuOpen(false)}
-              >
-                🕒 Timbrature
-              </Link>
-              <Link
-                to="/presenze"
-                onClick={() => setMenuOpen(false)}
-              >
-                📊 Presenze
-              </Link>
+              {allowedMenuSections.map((section) => (
+                <Link
+                  key={section.id}
+                  to={section.path}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {section.label}
+                </Link>
+              ))}
             </div>
             <div
               className="sidebar-overlay"
@@ -402,106 +546,63 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
 
         <main>
           <header>
-            <h1 onClick={() => navigate("/modelli")}
+            <h1 onClick={() => navigate(defaultPath)}
             >
               📅 Gestione Turni
             </h1>
           </header>
           <Routes>
-            <Route path="/" element={<Navigate to="/modelli" replace />} />
-            <Route
-              path="/collaboratori"
-              element={
-                <Collaboratori
-                  users={state.users}
-                  onAddUser={addUser}
-                  onUpdateUser={updateUser}
-                  onDeleteUser={deleteUser}
-                />
-              }
-            />
-            <Route
-              path="/modelli"
-              element={
-                <Modelli
-                  users={state.users}
-                  templates={state.templates || []}
-                  timePresets={state.timePresets || []}
-                  onAddTemplate={addTemplate}
-                  onUpdateTemplate={updateTemplate}
-                  onDeleteTemplate={deleteTemplate}
-                  onAddTimePreset={addTimePreset}
-                  onUpdateTimePreset={updateTimePreset}
-                  onDeleteTimePreset={deleteTimePreset}
-                />
-              }
-            />
-            <Route
-              path="/generatore-turni"
-              element={
-                <GeneratoreTurni
-                  templates={state.templates || []}
-                  generatedShifts={state.generatedShifts || []}
-                  onAddGeneratedShift={addGeneratedShift}
-                  onDeleteGeneratedShift={deleteGeneratedShift}
-                />
-              }
-            />
-            <Route
-              path="/timbrature"
-              element={
-                <Timbrature
-                  users={state.users || []}
-                  timeEntries={state.timeEntries || {}}
-                  onSaveEntry={saveTimeEntry}
-                />
-              }
-            />
-            <Route
-              path="/presenze"
-              element={
-                <Presenze users={state.users || []} timeEntries={state.timeEntries || {}} />
-              }
-            />
+            <Route path="/" element={<Navigate to={defaultPath} replace />} />
+            {sectionsConfig.map((section) => (
+              <Route
+                key={section.id}
+                path={section.path}
+                element={
+                  canAccess(section.id)
+                    ? sectionElements[section.id]
+                    : <Navigate to={defaultPath} replace />
+                }
+              />
+            ))}
             <Route
               path="/view"
               element={
-                <ViewTurno generatedShifts={state.generatedShifts || []} users={state.users || []} />
+                canAccess("generatore-turni") ? (
+                  <ViewTurno generatedShifts={state.generatedShifts || []} users={state.users || []} />
+                ) : (
+                  <Navigate to={defaultPath} replace />
+                )
               }
             />
           </Routes>
         </main>
         <nav className="bottom-nav">
-          <Link to="/collaboratori" title="Collaboratori" className={location.pathname === "/collaboratori" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/collaboratori" ? "person.2.fill.png" : "person.2.png"}`}
-              alt="Collaboratori"
-            />
-          </Link>
-          <Link to="/modelli" title="Modelli" className={location.pathname === "/modelli" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/modelli" ? "text.document.fill.png" : "text.document.png"}`}
-              alt="Modelli"
-            />
-          </Link>
-          <Link to="/generatore-turni" title="Generatore Turni" className={location.pathname === "/generatore-turni" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/generatore-turni" ? "calendar.circle.fill.png" : "calendar.circle.png"}`}
-              alt="Generatore Turni"
-            />
-          </Link>
-          <Link to="/timbrature" title="Timbrature" className={location.pathname === "/timbrature" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/timbrature" ? "clock.badge.checkmark.fill.png" : "clock.badge.checkmark.png"}`}
-              alt="Timbrature"
-            />
-          </Link>
-          <Link to="/presenze" title="Presenze" className={location.pathname === "/presenze" ? "active" : ""}>
-            <img
-              src={`${baseUrl}${location.pathname === "/presenze" ? "list.clipboard.fill.png" : "list.bullet.clipboard.png"}`}
-              alt="Presenze"
-            />
-          </Link>
+          {allowedSections.map((section) => {
+            const isActive = location.pathname === section.path;
+            return (
+              <Link
+                key={section.id}
+                to={section.path}
+                title={section.label}
+                className={isActive ? "active" : ""}
+              >
+                {section.id === "profilo" ? (
+                  <span className="profile-nav-avatar" aria-label="Profilo">
+                    {profileInitial}
+                  </span>
+                ) : section.iconRegular ? (
+                  <img
+                    src={`${baseUrl}${isActive ? section.iconActive : section.iconRegular}`}
+                    alt={section.label}
+                  />
+                ) : (
+                  <span className="nav-emoji" aria-label={section.label}>
+                    {section.navEmoji || "•"}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </div>
