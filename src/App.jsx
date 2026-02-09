@@ -6,6 +6,7 @@ import Collaboratori from "./components/Collaboratori";
 import Home from "./components/Home";
 import Modelli from "./components/Modelli";
 import GeneratoreTurni from "./components/GeneratoreTurni";
+import TurniCreati from "./components/TurniCreati";
 import ViewTurno from "./components/ViewTurno";
 import Timbrature from "./components/Timbrature";
 import Presenze from "./components/Presenze";
@@ -287,17 +288,28 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
 
   useEffect(() => {
     const setScreenHeight = () => {
-      const height = window.screen?.height || window.innerHeight;
+      const isStandaloneDisplay = window.matchMedia?.("(display-mode: standalone)")?.matches;
+      const isFullscreenDisplay = window.matchMedia?.("(display-mode: fullscreen)")?.matches;
+      const isIOSStandalone = window.navigator?.standalone;
+      const isStandaloneMode = Boolean(isStandaloneDisplay || isFullscreenDisplay || isIOSStandalone);
+      const visualHeight = window.visualViewport?.height || window.innerHeight;
+      const height = isStandaloneMode
+        ? (window.screen?.height || window.innerHeight)
+        : visualHeight;
       document.documentElement.style.setProperty("--screen-height", `${height}px`);
     };
 
     setScreenHeight();
     window.addEventListener("orientationchange", setScreenHeight);
     window.addEventListener("resize", setScreenHeight);
+    window.visualViewport?.addEventListener?.("resize", setScreenHeight);
+    window.visualViewport?.addEventListener?.("scroll", setScreenHeight);
 
     return () => {
       window.removeEventListener("orientationchange", setScreenHeight);
       window.removeEventListener("resize", setScreenHeight);
+      window.visualViewport?.removeEventListener?.("resize", setScreenHeight);
+      window.visualViewport?.removeEventListener?.("scroll", setScreenHeight);
     };
   }, []);
 
@@ -386,10 +398,14 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
         onDeleteGeneratedShift={deleteGeneratedShift}
       />
     ),
+    "turni-creati": (
+      <TurniCreati generatedShifts={state.generatedShifts || []} />
+    ),
     timbrature: (
       <Timbrature
         users={state.users || []}
         timeEntries={state.timeEntries || {}}
+        generatedShifts={state.generatedShifts || []}
         onSaveEntry={saveTimeEntry}
       />
     ),
@@ -573,7 +589,7 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
           <header>
             <h1 onClick={() => navigate(defaultPath)}
             >
-              📅 Gestione Turni
+              Gestione Turni
             </h1>
           </header>
           <Routes>
@@ -592,7 +608,7 @@ function AppContent({ state, addUser, updateUser, deleteUser, addTemplate, updat
             <Route
               path="/view"
               element={
-                canAccess("generatore-turni") ? (
+                canAccess("generatore-turni") || canAccess("turni-creati") ? (
                   <ViewTurno generatedShifts={state.generatedShifts || []} users={state.users || []} />
                 ) : (
                   <Navigate to={defaultPath} replace />
